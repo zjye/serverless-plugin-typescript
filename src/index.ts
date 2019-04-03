@@ -4,7 +4,11 @@ import * as fs from 'fs-extra'
 import * as _ from 'lodash'
 import * as globby from 'globby'
 
-import { ServerlessOptions, ServerlessInstance, ServerlessFunction } from './types'
+import {
+  ServerlessOptions,
+  ServerlessInstance,
+  ServerlessFunction
+} from './types'
 import * as typescript from './typescript'
 
 import { watchFiles } from './watchFiles'
@@ -14,7 +18,6 @@ const serverlessFolder = '.serverless'
 const buildFolder = '.build'
 
 export class TypeScriptPlugin {
-
   private originalServicePath: string
   private isWatching: boolean
 
@@ -47,7 +50,9 @@ export class TypeScriptPlugin {
         const emitedFiles = await this.compileTs()
         if (this.isWatching) {
           emitedFiles.forEach(filename => {
-            const module = require.resolve(path.resolve(this.originalServicePath, filename))
+            const module = require.resolve(
+              path.resolve(this.originalServicePath, filename)
+            )
             delete require.cache[module]
           })
         }
@@ -63,12 +68,20 @@ export class TypeScriptPlugin {
 
   get functions() {
     return this.options.function
-      ? { [this.options.function] : this.serverless.service.functions[this.options.function] }
+      ? {
+          [this.options.function]: this.serverless.service.functions[
+            this.options.function
+          ]
+        }
       : this.serverless.service.functions
   }
 
   get rootFileNames() {
-    return typescript.extractFileNames(this.originalServicePath, this.serverless.service.provider.name, this.functions)
+    return typescript.extractFileNames(
+      this.originalServicePath,
+      this.serverless.service.provider.name,
+      this.functions
+    )
   }
 
   prepare() {
@@ -78,10 +91,13 @@ export class TypeScriptPlugin {
       const fn = functions[fnName]
       fn.package = fn.package || {
         exclude: [],
-        include: [],
+        include: []
       }
       // Add plugin to excluded packages or an empty array if exclude is undefined
-      fn.package.exclude = _.uniq([...fn.package.exclude || [], 'node_modules/serverless-plugin-typescript'])
+      fn.package.exclude = _.uniq([
+        ...(fn.package.exclude || []),
+        'node_modules/serverless-plugin-typescript'
+      ])
     }
   }
 
@@ -119,7 +135,10 @@ export class TypeScriptPlugin {
       // Save original service path and functions
       this.originalServicePath = this.serverless.config.servicePath
       // Fake service path so that serverless will know what to zip
-      this.serverless.config.servicePath = path.join(this.originalServicePath, buildFolder)
+      this.serverless.config.servicePath = path.join(
+        this.originalServicePath,
+        buildFolder
+      )
     }
 
     const tsconfig = typescript.getTypescriptConfig(
@@ -138,16 +157,25 @@ export class TypeScriptPlugin {
   async copyExtras() {
     // include node_modules into build
     if (!fs.existsSync(path.resolve(path.join(buildFolder, 'node_modules')))) {
-      fs.symlinkSync(path.resolve('node_modules'), path.resolve(path.join(buildFolder, 'node_modules')))
+      fs.symlinkSync(
+        path.resolve('node_modules'),
+        path.resolve(path.join(buildFolder, 'node_modules'))
+      )
     }
 
     // include package.json into build so Serverless can exlcude devDeps during packaging
     if (!fs.existsSync(path.resolve(path.join(buildFolder, 'package.json')))) {
-      fs.symlinkSync(path.resolve('package.json'), path.resolve(path.join(buildFolder, 'package.json')))
+      fs.symlinkSync(
+        path.resolve('package.json'),
+        path.resolve(path.join(buildFolder, 'package.json'))
+      )
     }
 
     // include any "extras" from the "include" section
-    if (this.serverless.service.package.include && this.serverless.service.package.include.length > 0) {
+    if (
+      this.serverless.service.package.include &&
+      this.serverless.service.package.include.length > 0
+    ) {
       const files = await globby(this.serverless.service.package.include)
 
       for (const filename of files) {
@@ -159,7 +187,10 @@ export class TypeScriptPlugin {
         }
 
         if (!fs.existsSync(destFileName)) {
-          fs.copySync(path.resolve(filename), path.resolve(path.join(buildFolder, filename)))
+          fs.copySync(
+            path.resolve(filename),
+            path.resolve(path.join(buildFolder, filename))
+          )
         }
       }
     }
@@ -174,7 +205,7 @@ export class TypeScriptPlugin {
     if (this.options.function) {
       const fn = this.serverless.service.functions[this.options.function]
       const basename = path.basename(fn.package.artifact)
-      fn.package.artifact =  path.join(
+      fn.package.artifact = path.join(
         this.originalServicePath,
         serverlessFolder,
         path.basename(fn.package.artifact)
@@ -188,7 +219,9 @@ export class TypeScriptPlugin {
         this.serverless.service.functions[name].package.artifact = path.join(
           this.originalServicePath,
           serverlessFolder,
-          path.basename(this.serverless.service.functions[name].package.artifact)
+          path.basename(
+            this.serverless.service.functions[name].package.artifact
+          )
         )
       })
       return
@@ -199,6 +232,18 @@ export class TypeScriptPlugin {
       serverlessFolder,
       path.basename(this.serverless.service.package.artifact)
     )
+
+    this.serverless.service.getAllFunctions().forEach(name => {
+      if (this.serverless.service.functions[name].package.artifact) {
+        this.serverless.service.functions[name].package.artifact = path.join(
+          this.originalServicePath,
+          serverlessFolder,
+          path.basename(
+            this.serverless.service.functions[name].package.artifact
+          )
+        )
+      }
+    })
   }
 
   async cleanup(): Promise<void> {
@@ -208,7 +253,6 @@ export class TypeScriptPlugin {
     // Remove temp build folder
     fs.removeSync(path.join(this.originalServicePath, buildFolder))
   }
-
 }
 
 module.exports = TypeScriptPlugin
