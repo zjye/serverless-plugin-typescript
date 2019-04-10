@@ -1,17 +1,17 @@
 export interface ServerlessInstance {
   cli: {
-    log(str: string)
+    log(str: string);
   }
   config: {
-    servicePath: string
+    servicePath: string;
   }
   service: {
     provider: {
-      name: string
-    }
-    functions: { [key: string]: ServerlessFunction }
-    package: ServerlessPackage
-    getAllFunctions: () => string[]
+      name: string;
+    };
+    functions: { [key: string]: ServerlessFunction };
+    package: ServerlessPackage;
+    getAllFunctions: () => string[];
   }
   pluginManager: PluginManager
 }
@@ -32,6 +32,12 @@ export interface ServerlessPackage {
   exclude: string[]
   artifact?: string
   individually?: boolean
+}
+export interface ServerlessLayer {
+  path: string
+  name?: string
+  description?: string
+  package: ServerlessPackage
 }
 
 export interface PluginManager {
