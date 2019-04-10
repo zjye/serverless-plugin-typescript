@@ -12,6 +12,8 @@ export interface ServerlessInstance {
     functions: { [key: string]: ServerlessFunction };
     package: ServerlessPackage;
     getAllFunctions: () => string[];
+    layers: { [key: string]: ServerlessLayer };
+    getAllLayers: () => string[];
   }
   pluginManager: PluginManager
 }
