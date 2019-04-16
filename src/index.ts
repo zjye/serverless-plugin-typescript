@@ -171,6 +171,33 @@ export class TypeScriptPlugin {
       )
     }
 
+    if (!fs.existsSync(path.resolve(path.join(buildFolder, 'layers')))) {
+      fs.mkdirSync(path.resolve(path.join(buildFolder, 'layers')))
+      fs.mkdirSync(path.resolve(path.join(buildFolder, 'layers', 'nodejs')))
+    }
+    // include node_modules into build
+    if (
+      !fs.existsSync(
+        path.resolve(path.join(buildFolder, 'layers', 'nodejs', 'node_modules'))
+      )
+    ) {
+      fs.symlinkSync(
+        path.resolve('node_modules'),
+        path.resolve(path.join(buildFolder, 'layers', 'nodejs', 'node_modules'))
+      )
+    }
+
+    // include package.json into build so Serverless can exlcude devDeps during packaging
+    if (
+      !fs.existsSync(
+        path.resolve(path.join(buildFolder, 'layers', 'nodejs', 'package.json'))
+      )
+    ) {
+      fs.symlinkSync(
+        path.resolve('package.json'),
+        path.resolve(path.join(buildFolder, 'layers', 'nodejs', 'package.json'))
+      )
+    }
     // include any "extras" from the "include" section
     if (
       this.serverless.service.package.include &&
@@ -241,6 +268,16 @@ export class TypeScriptPlugin {
           path.basename(
             this.serverless.service.functions[name].package.artifact
           )
+        )
+      }
+    })
+
+    this.serverless.service.getAllLayers().forEach(name => {
+      if (this.serverless.service.layers[name].package.artifact) {
+        this.serverless.service.layers[name].package.artifact = path.join(
+          this.originalServicePath,
+          serverlessFolder,
+          path.basename(this.serverless.service.layers[name].package.artifact)
         )
       }
     })
