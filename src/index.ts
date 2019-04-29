@@ -155,20 +155,21 @@ export class TypeScriptPlugin {
   }
 
   async copyExtras() {
-    // include node_modules into build
-    if (!fs.existsSync(path.resolve(path.join(buildFolder, 'node_modules')))) {
-      fs.symlinkSync(
+    const outPkgPath = path.resolve(path.join(buildFolder, 'package.json'))
+    const outModulesPath = path.resolve(path.join(buildFolder, 'node_modules'))
+
+    // Link or copy node_modules and package.json to .build so Serverless can
+    // exlcude devDeps during packaging
+    if (!fs.existsSync(outModulesPath)) {
+      await this.linkOrCopy(
         path.resolve('node_modules'),
-        path.resolve(path.join(buildFolder, 'node_modules'))
+        outModulesPath,
+        'junction'
       )
     }
 
-    // include package.json into build so Serverless can exlcude devDeps during packaging
-    if (!fs.existsSync(path.resolve(path.join(buildFolder, 'package.json')))) {
-      fs.symlinkSync(
-        path.resolve('package.json'),
-        path.resolve(path.join(buildFolder, 'package.json'))
-      )
+    if (!fs.existsSync(outPkgPath)) {
+      await this.linkOrCopy(path.resolve('package.json'), outPkgPath, 'file')
     }
 
     if (!fs.existsSync(path.resolve(path.join(buildFolder, 'layers')))) {
@@ -289,6 +290,23 @@ export class TypeScriptPlugin {
     this.serverless.config.servicePath = this.originalServicePath
     // Remove temp build folder
     fs.removeSync(path.join(this.originalServicePath, buildFolder))
+  }
+
+  /**
+   * Attempt to symlink a given path or directory and copy if it fails with an
+   * `EPERM` error.
+   */
+  private async linkOrCopy(
+    srcPath: string,
+    dstPath: string,
+    type?: 'dir' | 'junction' | 'file'
+  ): Promise<void> {
+    return fs.symlink(srcPath, dstPath, type).catch(error => {
+      if (error.code === 'EPERM' && error.errno === -4048) {
+        return fs.copy(srcPath, dstPath)
+      }
+      throw error
+    })
   }
 }
 
